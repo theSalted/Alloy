@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "Alloy",
     platforms: [
-        .macOS(.v14),
+        .macOS(.v15),
         .iOS(.v17),
         .visionOS(.v1)
     ],
@@ -15,12 +15,21 @@ let package = Package(
         .library(
             name: "Alloy",
             targets: ["Alloy"]),
+        .executable(name: "AlloyExample",
+                    targets: ["AlloyExample"])
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "Alloy"),
+            name: "Alloy",
+            resources: [
+                .process("Kernel/NDArrayKernels.metal") // Include the Kernel directory containing .metal files
+            ]),
+        .executableTarget(
+            name: "AlloyExample",
+            dependencies: ["Alloy"]
+        )
 
     ]
 )
