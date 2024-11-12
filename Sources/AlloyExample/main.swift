@@ -33,8 +33,8 @@ let resultData = c.evaluate()
 c.backward()
 
 // Retrieve gradients
-let gradA = a.gradeint()
-let gradB = b.gradeint()
+let gradA = a.gradient()
+let gradB = b.gradient()
 
 print("Result data:", resultData.prefix(5))
 print("Gradient w.r.t A:", gradA.prefix(5))

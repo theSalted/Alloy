@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  NDArray+Arithmetic.swift
 //  Alloy
 //
 //  Created by Yuhao Chen on 11/11/24.
