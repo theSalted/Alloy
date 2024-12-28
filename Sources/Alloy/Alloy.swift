@@ -7,27 +7,20 @@
 
 import MetalPerformanceShadersGraph
 import MetalPerformanceShaders
-import Metal
+@preconcurrency import Metal
 import MetalKit
 
-open class NeuralNetwork {
-    public var device: MTLDevice
-    public var commandQueue: MTLCommandQueue
-    public var graph: MPSGraph
+public struct Alloy: Sendable {
+    static let shared = Alloy()
     
-    public init(device: MTLDevice, commandQueue: MTLCommandQueue) {
+    let device: MTLDevice
+    
+    let commandQueue: MTLCommandQueue
+    
+    private init() {
+        guard let device = MTLCreateSystemDefaultDevice() else { fatalError("No Metal device found") }
+        guard let commandQueue = device.makeCommandQueue() else { fatalError("No command queue found") }
         self.device = device
         self.commandQueue = commandQueue
-        self.graph = MPSGraph()
-    }
-    
-    
-}
-
-/*
-extension NDArray: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        ""
     }
 }
- */
