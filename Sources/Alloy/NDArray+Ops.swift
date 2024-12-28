@@ -6,5 +6,11 @@
 //
 
 extension NDArray {
+    public static func +(_ lhs: NDArray, _ rhs: NDArray) -> NDArray {
+        // -TODO: Implement broadcasting here
+        let out = NDArray(elements: (lhs, rhs), operator: "+", shape: lhs.shape)
+        
+        return out
+    }
     
 }
