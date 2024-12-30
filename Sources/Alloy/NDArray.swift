@@ -131,3 +131,75 @@ extension NDArray {
     }
 }
 
+
+extension NDArray: CustomDebugStringConvertible {
+    /// Provides a human-readable debug description of the NDArray.
+    public var debugDescription: String {
+        guard let flatData = self.data else {
+            return "NDArray(shape: \(shape), data: nil)"
+        }
+        
+        // Check if the shape is valid with the data count
+        let expectedCount = shape.reduce(1, *)
+        if flatData.count != expectedCount {
+            return "NDArray(shape: \(shape), data count: \(flatData.count) does not match shape)"
+        }
+        
+        // Define the maximum number of elements to display per dimension to prevent overly long descriptions
+        let maxElements = 5
+        
+        // A helper function to recursively build the nested string
+        func buildString(from data: [Float], shape: [Int], depth: Int = 0) -> String {
+            // Base case: no more dimensions, return a single element
+            if shape.isEmpty {
+                return "\(data[0])"
+            }
+            
+            let currentDim = shape[0]
+            let remainingShape = Array(shape.dropFirst())
+            var result = "["
+            
+            // Determine how many elements to show
+            let elementsToShow = currentDim > maxElements ? maxElements : currentDim
+            let showEllipsis = currentDim > maxElements
+            
+            for i in 0..<elementsToShow {
+                let startIndex = i * (data.count / currentDim)
+                let endIndex = (i + 1) * (data.count / currentDim)
+                let slice = Array(data[startIndex..<endIndex])
+                result += buildString(from: slice, shape: remainingShape, depth: depth + 1)
+                if i < elementsToShow - 1 {
+                    result += ", "
+                }
+            }
+            
+            if showEllipsis {
+                result += ", …"
+            }
+            result += "]"
+            return result
+        }
+        
+        // To handle multi-dimensional data, we need to chunk the flat data accordingly
+        func reshape(data: [Float], shape: [Int]) -> [Any] {
+            if shape.isEmpty {
+                return [data.first!]
+            }
+            let dim = shape[0]
+            let subShape = Array(shape.dropFirst())
+            let size = subShape.reduce(1, *)
+            var result: [Any] = []
+            for i in 0..<dim {
+                let start = i * size
+                let end = start + size
+                let chunk = Array(data[start..<end])
+                result.append(contentsOf: reshape(data: chunk, shape: subShape))
+            }
+            return result
+        }
+        
+        // For simplicity, we'll limit the nesting depth and elements displayed
+        let description = buildString(from: flatData, shape: self.shape)
+        return "NDArray(shape: \(shape), data: \(description))"
+    }
+}
