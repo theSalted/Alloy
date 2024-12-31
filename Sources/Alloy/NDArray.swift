@@ -25,7 +25,7 @@ public enum NDArrayError: Error {
 /// `NDArray` is a node in a DAG representing a tensor computation.
 /// - **Leaf Nodes**: Have no `op` and may contain raw CPU data (`data`). If `data` is `nil`, it's treated as a placeholder during graph execution.
 /// - **Internal Nodes**: Contain an `op`, as well as references to one or more `parents`.
-open class NDArray: Hashable {
+public class NDArray: Hashable {
     
     // MARK: - Public Properties
     
