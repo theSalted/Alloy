@@ -534,6 +534,134 @@ extension NDArray {
     }
 }
 
+extension NDArray {
+    // MARK: - Reduction Operations
+    /// Computes the reduction sum of all elements in the `NDArray`.
+    public func sum(axis: Int? = nil) -> NDArray {
+        let label = "\(self.label ?? "NDArray").sum()"
+        
+        return NDArray(
+            shape: [], // Scalar result
+            label: label,
+            parents: [self]
+        ) { graph, inputs, nodeLabel in
+            guard inputs.count == 1 else {
+                throw NDArrayError.operationError("`sum` operation expects exactly 1 input.")
+            }
+            if let axis {
+                return graph.reductionSum(with: inputs[0], axis: axis, name: nodeLabel)
+            }
+            return graph.reductionSum(with: inputs[0], axes: [], name: nodeLabel)
+        }
+    }
+    
+    /// Computes the sum of all elements in the `NDArray`.
+    ///
+    /// - Returns: A new `NDArray` representing the sum of all elements.
+    /// - Throws: `NDArrayError.operationError` if the operation fails.
+    public func cumsum(axis: Int,
+                       reverse: Bool = false,
+                       inclusive: Bool = true) -> NDArray {
+        let label = "\(self.label ?? "NDArray").sum()"
+        
+        return NDArray(
+            shape: [], // Scalar result
+            label: label,
+            parents: [self]
+        ) { graph, inputs, nodeLabel in
+            guard inputs.count == 1 else {
+                throw NDArrayError.operationError("`sum` operation expects exactly 1 input.")
+            }
+            return graph.cumulativeSum(inputs[0], axis: axis, exclusive: inclusive, reverse: reverse, name: nodeLabel)
+        }
+    }
+    
+    /// Computes the maximum value among all elements in the `NDArray`.
+    ///
+    /// - Returns: A new `NDArray` representing the maximum value.
+    /// - Throws: `NDArrayError.operationError` if the operation fails.
+    public func max(axis: Int? = nil) -> NDArray {
+        let label = "\(self.label ?? "NDArray").max()"
+        
+        return NDArray(
+            shape: [], // Scalar result
+            label: label,
+            parents: [self]
+        ) { graph, inputs, nodeLabel in
+            guard inputs.count == 1 else {
+                throw NDArrayError.operationError("`max` operation expects exactly 1 input.")
+            }
+            if let axis {
+                return graph.reductionMinimum(with: inputs[0], axis: axis, name: nodeLabel)
+            }
+            return graph.reductionMinimum(with: inputs[0], axes: nil, name: nodeLabel)
+        }
+    }
+    
+    /// Computes the minimum value among all elements in the `NDArray`.
+    ///
+    /// - Returns: A new `NDArray` representing the minimum value.
+    /// - Throws: `NDArrayError.operationError` if the operation fails.
+    public func min(axis: Int? = nil) -> NDArray {
+        let label = "\(self.label ?? "NDArray").min()"
+        
+        return NDArray(
+            shape: [], // Scalar result
+            label: label,
+            parents: [self]
+        ) { graph, inputs, nodeLabel in
+            guard inputs.count == 1 else {
+                throw NDArrayError.operationError("`min` operation expects exactly 1 input.")
+            }
+            if let axis {
+                return graph.reductionMinimum(with: inputs[0], axis: axis, name: nodeLabel)
+            }
+            return graph.reductionMinimum(with: inputs[0], axes: nil, name: nodeLabel)
+        }
+    }
+    
+    /// Computes the index of the maximum value along the specified axis.
+    ///
+    /// - Parameter axis: The axis along which to compute the `argmax`.
+    /// - Returns: A new `NDArray` representing the indices of the maximum values.
+    /// - Throws: `NDArrayError.operationError` if the operation fails.
+    public func argmax(axis: Int) -> NDArray {
+        let label = "\(self.label ?? "NDArray").argmax(axis: \(axis))"
+        
+        return NDArray(
+            shape: self.shape.filter { $0 != axis }, // Reduced shape
+            label: label,
+            parents: [self]
+        ) { graph, inputs, nodeLabel in
+            guard inputs.count == 1 else {
+                throw NDArrayError.operationError("`argmax` operation expects exactly 1 input.")
+            }
+            return graph.reductionArgMaximum(with: inputs[0], axis: axis, name: nodeLabel)
+        }
+    }
+    
+    /// Computes the index of the minimum value along the specified axis.
+    ///
+    /// - Parameter axis: The axis along which to compute the `argmin`.
+    /// - Returns: A new `NDArray` representing the indices of the minimum values.
+    /// - Throws: `NDArrayError.operationError` if the operation fails.
+    public func argmin(axis: Int) -> NDArray {
+        let label = "\(self.label ?? "NDArray").argmin(axis: \(axis))"
+        
+        return NDArray(
+            shape: self.shape.filter { $0 != axis }, // Reduced shape
+            label: label,
+            parents: [self]
+        ) { graph, inputs, nodeLabel in
+            guard inputs.count == 1 else {
+                throw NDArrayError.operationError("`argmin` operation expects exactly 1 input.")
+            }
+            return graph.reductionArgMinimum(with: inputs[0], axis: axis, name: nodeLabel)
+        }
+    }
+    
+}
+
 // MARK: - Reshaping and Broadcasting Helpers
 
 extension NDArray {
