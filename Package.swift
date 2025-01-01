@@ -27,7 +27,8 @@ let package = Package(
         .target(
             name: "Alloy"),
         .target(
-            name: "AlloyDatasets"),
+            name: "AlloyDatasets",
+            dependencies: ["Alloy"]),
         .executableTarget(
             name: "AlloyExample",
             dependencies: ["Alloy"]

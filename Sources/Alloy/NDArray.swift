@@ -37,7 +37,7 @@ public class NDArray: Hashable {
     
     /// If this node is a leaf, you can store CPU-side data here.
     /// If `nil`, and `op == nil`, this node becomes a placeholder during graph building.
-    public var data: [Float]?
+    public var data: Data?
     
     /// A list of parent NDArrays. If this node is an internal operation node,
     /// the operation `op` is applied to all parents’ outputs.
@@ -55,7 +55,7 @@ public class NDArray: Hashable {
     ///   - data: If provided, this node becomes a constant in the graph.
     ///           If `nil`, it's treated as a placeholder.
     public init(
-        _ data: [Float]? = nil,
+        _ value: [Float]? = nil,
         shape: [Int],
         label: String? = nil
     ) {
@@ -63,15 +63,15 @@ public class NDArray: Hashable {
         for dim in shape {
             precondition(dim > 0, "Shape dimensions must be > 0. Got \(dim)")
         }
-        if let d = data {
+        if let value {
             let prod = shape.reduce(1, *)
-            precondition(d.count == prod,
-                         "Data count (\(d.count)) != shape’s element count (\(prod))")
+            precondition(value.count == prod,
+                         "Data count (\(value.count)) != shape’s element count (\(prod))")
         }
         
         self.shape = shape
         self.label = label
-        self.data  = data
+        self.data  = value?.toData(shape: shape)
         self.op    = nil  // Leaf => no op
     }
     
@@ -133,46 +133,58 @@ extension NDArray {
 
 
 extension NDArray: CustomDebugStringConvertible {
-    /// Provides a human-readable debug description of the NDArray.
     public var debugDescription: String {
-        guard let flatData = self.data else {
+        guard let rawData = self.data else {
             return "NDArray(shape: \(shape), data: nil)"
         }
         
-        // Check if the shape is valid with the data count
-        let expectedCount = shape.reduce(1, *)
-        if flatData.count != expectedCount {
-            return "NDArray(shape: \(shape), data count: \(flatData.count) does not match shape)"
+        let elementCount = shape.reduce(1, *)
+        let expectedByteCount = elementCount * MemoryLayout<Float>.size
+        
+        // Compare the size in bytes, not the size in elements
+        if rawData.count != expectedByteCount {
+            return """
+            NDArray(shape: \(shape), 
+                    data byte-count: \(rawData.count) 
+                    != expected byte-count: \(expectedByteCount))
+            """
         }
         
-        // Define the maximum number of elements to display per dimension to prevent overly long descriptions
+        // Now convert bytes to [Float] for representation
+        let floatArray = rawData.toFloatArray() ?? []
+        
+        // If the float array is empty or has a mismatch, bail early
+        if floatArray.count != elementCount {
+            return """
+            NDArray(shape: \(shape), 
+                    data float-count: \(floatArray.count) 
+                    != expected float-count: \(elementCount))
+            """
+        }
+        
+        // Define a max number of elements to show per dimension
         let maxElements = 5
         
-        // A helper function to recursively build the nested string
-        func buildString(from data: [Float], shape: [Int], depth: Int = 0) -> String {
-            // Base case: no more dimensions, return a single element
-            if shape.isEmpty {
-                return "\(data[0])"
-            }
+        func buildString(from data: [Float], shape: [Int]) -> String {
+            guard !shape.isEmpty else { return "\(data[0])" }
             
             let currentDim = shape[0]
             let remainingShape = Array(shape.dropFirst())
+            
+            let elementsToShow = Swift.min(currentDim, maxElements)
+            let showEllipsis = (currentDim > maxElements)
+            
             var result = "["
-            
-            // Determine how many elements to show
-            let elementsToShow = currentDim > maxElements ? maxElements : currentDim
-            let showEllipsis = currentDim > maxElements
-            
             for i in 0..<elementsToShow {
                 let startIndex = i * (data.count / currentDim)
                 let endIndex = (i + 1) * (data.count / currentDim)
                 let slice = Array(data[startIndex..<endIndex])
-                result += buildString(from: slice, shape: remainingShape, depth: depth + 1)
+                
+                result += buildString(from: slice, shape: remainingShape)
                 if i < elementsToShow - 1 {
                     result += ", "
                 }
             }
-            
             if showEllipsis {
                 result += ", …"
             }
@@ -180,26 +192,7 @@ extension NDArray: CustomDebugStringConvertible {
             return result
         }
         
-        // To handle multi-dimensional data, we need to chunk the flat data accordingly
-        func reshape(data: [Float], shape: [Int]) -> [Any] {
-            if shape.isEmpty {
-                return [data.first!]
-            }
-            let dim = shape[0]
-            let subShape = Array(shape.dropFirst())
-            let size = subShape.reduce(1, *)
-            var result: [Any] = []
-            for i in 0..<dim {
-                let start = i * size
-                let end = start + size
-                let chunk = Array(data[start..<end])
-                result.append(contentsOf: reshape(data: chunk, shape: subShape))
-            }
-            return result
-        }
-        
-        // For simplicity, we'll limit the nesting depth and elements displayed
-        let description = buildString(from: flatData, shape: self.shape)
-        return "NDArray(shape: \(shape), data: \(description))"
+        let debugStr = buildString(from: floatArray, shape: shape)
+        return "NDArray(shape: \(shape), data: \(debugStr))"
     }
 }

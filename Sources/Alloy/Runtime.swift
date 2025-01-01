@@ -36,17 +36,21 @@ public func run(
     )
     
     guard let mpsndarray = resultMap[finalTensor]?.mpsndarray() else {
-        throw NDArrayError.operationError("Fail to convert MPSGraphTensorData to MPSNDArray")
+        throw NDArrayError.operationError("Failed to convert MPSGraphTensorData to MPSNDArray")
     }
+    
+    // Prepare a Data buffer of the correct size
     let shape = root.shape
     let elementCount = shape.reduce(1, *)
-    var cpuBuffer = [Float](repeating: 0, count: elementCount)
+    let totalBytes = elementCount * MemoryLayout<Float>.size
+    var bufferData = Data(count: totalBytes)
     
-    precondition(cpuBuffer.count == elementCount, "CPU buffer size mismatch.")
-            
-            // Read the bytes from `MPSNDArray` into `cpuBuffer`
-    mpsndarray.readBytes(&cpuBuffer, strideBytes: nil)
+    // Read bytes directly into `bufferData`
+    bufferData.withUnsafeMutableBytes { rawBufferPtr in
+        guard let ptr = rawBufferPtr.baseAddress else { return }
+        mpsndarray.readBytes(ptr, strideBytes: nil)
+    }
     
-    // Update the NDArray's data
-    root.data = cpuBuffer
+    // Store the data in the NDArray
+    root.data = bufferData
 }

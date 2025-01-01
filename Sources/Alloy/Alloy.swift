@@ -11,11 +11,10 @@ import MetalPerformanceShaders
 import MetalKit
 
 public struct Alloy: Sendable {
-    static let shared = Alloy()
+    public static let shared = Alloy()
     
-    let device: MTLDevice
-    
-    let commandQueue: MTLCommandQueue
+    public let device: MTLDevice
+    public let commandQueue: MTLCommandQueue
     
     private init() {
         guard let device = MTLCreateSystemDefaultDevice() else { fatalError("No Metal device found") }
