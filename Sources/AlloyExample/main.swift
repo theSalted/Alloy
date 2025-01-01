@@ -18,7 +18,6 @@ do {
     print("Success (c): \(c)")
     try run(d)
     print("Success (d): \(d)")
-    try run(e)
     print("Success (e): \(e)")
 
 } catch {

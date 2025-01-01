@@ -15,6 +15,9 @@ let package = Package(
         .library(
             name: "Alloy",
             targets: ["Alloy"]),
+        .library(
+            name: "AlloyDatasets",
+            targets: ["AlloyDatasets"]),
         .executable(name: "AlloyExample",
                     targets: ["AlloyExample"])
     ],
@@ -23,6 +26,8 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "Alloy"),
+        .target(
+            name: "AlloyDatasets"),
         .executableTarget(
             name: "AlloyExample",
             dependencies: ["Alloy"]
