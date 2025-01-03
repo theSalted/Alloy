@@ -18,6 +18,9 @@ let package = Package(
         .library(
             name: "AlloyDatasets",
             targets: ["AlloyDatasets"]),
+        .library(
+            name: "AlloyNN",
+            targets: ["AlloyNN"]),
         .executable(name: "AlloyExample",
                     targets: ["AlloyExample"])
     ],
@@ -28,6 +31,9 @@ let package = Package(
             name: "Alloy"),
         .target(
             name: "AlloyDatasets",
+            dependencies: ["Alloy"]),
+        .target(
+            name: "AlloyNN",
             dependencies: ["Alloy"]),
         .executableTarget(
             name: "AlloyExample",
