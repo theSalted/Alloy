@@ -14,11 +14,9 @@ let d = c * 4
 let e = d / 12
 
 do {
-    try run(c)
+    try run(c, d, e)
     print("Success (c): \(c)")
-    try run(d)
     print("Success (d): \(d)")
-    try run(e)
     print("Success (e): \(e)")
 
 } catch {

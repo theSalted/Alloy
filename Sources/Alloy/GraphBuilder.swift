@@ -63,5 +63,60 @@ struct GraphBuilder {
         
         return (graph, finalTensor)
     }
+    
+    /// Build an MPSGraph from multiple NDArray roots.
+    /// Returns (graph, nodeToTensor) so you can pick out the final
+    /// MPSGraphTensor(s) for whichever root(s) you like.
+    static func buildGraph(from roots: [NDArray]) throws -> (MPSGraph, [NDArray: MPSGraphTensor]) {
+        // 1) Gather all nodes in topological order
+        let sortedNodes = roots.multiRootTopologicalSort()
+        guard !sortedNodes.isEmpty else {
+            throw NDArrayError.emptyDAG("No NDArrays provided or they produce an empty DAG.")
+        }
+
+        // 2) Create the graph
+        let graph = MPSGraph()
+        var nodeToTensor = [NDArray : MPSGraphTensor]()
+
+        // 3) Build MPSGraphTensors from leaf -> internal nodes
+        for node in sortedNodes {
+            if let op = node.op {
+                // Internal node
+                let parentTensors = try node.parents.map { parent in
+                    guard let t = nodeToTensor[parent] else {
+                        throw NDArrayError.operationError(
+                            "Missing parent tensor for node \(node.label ?? "<?>")."
+                        )
+                    }
+                    return t
+                }
+                let newTensor = try op(graph, parentTensors, node.label)
+                nodeToTensor[node] = newTensor
+                
+            } else {
+                // Leaf node => constant or placeholder
+                if let rawData = node.data {
+                    // Constant
+                    let data = rawData.withUnsafeBytes { Data($0) }
+                    let t = graph.constant(
+                        data,
+                        shape: node.shape.map { NSNumber(value: $0) },
+                        dataType: .float32
+                    )
+                    nodeToTensor[node] = t
+                } else {
+                    // Placeholder
+                    let t = graph.placeholder(
+                        shape: node.shape.map { NSNumber(value: $0) },
+                        dataType: .float32,
+                        name: node.label
+                    )
+                    nodeToTensor[node] = t
+                }
+            }
+        }
+
+        return (graph, nodeToTensor)
+    }
 }
 

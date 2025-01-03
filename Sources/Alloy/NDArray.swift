@@ -196,3 +196,42 @@ extension NDArray: CustomDebugStringConvertible {
         return "NDArray(shape: \(shape), data: \(debugStr))"
     }
 }
+
+extension Collection where Element == NDArray {
+    /// Performs a topological sort on multiple NDArray roots.
+    /// The result is guaranteed to have parents before children.
+    func multiRootTopologicalSort() -> [NDArray] {
+        var visited = Set<NDArray>()
+        var sorted  = [NDArray]()
+        
+        func dfs(_ node: NDArray) {
+            if visited.contains(node) { return }
+            visited.insert(node)
+            for parent in node.parents {
+                dfs(parent)
+            }
+            sorted.append(node)
+        }
+        
+        // For each "root", DFS to collect all ancestors
+        for root in self {
+            dfs(root)
+        }
+        
+        // Remove duplicates but maintain the partial order.
+        // Because we only push nodes when we finish their DFS,
+        // the array is already topologically sorted.
+        // We just need to keep them in the order encountered.
+        // A stable way to do that is:
+        var deduplicated = [NDArray]()
+        var seen = Set<NDArray>()
+        for node in sorted {
+            if !seen.contains(node) {
+                deduplicated.append(node)
+                seen.insert(node)
+            }
+        }
+        
+        return deduplicated
+    }
+}
