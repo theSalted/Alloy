@@ -5,6 +5,7 @@
 //  Created by Yuhao Chen on 11/10/24.
 //
 import Alloy
+import AlloyDatasets
 
 let a = NDArray([1, 1, 1, 1], shape: [2, 2])
 let b = NDArray([2], shape: [1])
@@ -22,4 +23,10 @@ do {
 } catch {
     print("Error: \(error)")
 }
+
+// MNIST
+let mnist = try MNIST()
+let (trainX, trainY) = try mnist.getTrainingBatch()
+let (testX, testY) = try mnist.getTestingBatch()
+
 

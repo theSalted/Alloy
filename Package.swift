@@ -37,7 +37,7 @@ let package = Package(
             dependencies: ["Alloy"]),
         .executableTarget(
             name: "AlloyExample",
-            dependencies: ["Alloy"]
+            dependencies: ["Alloy", "AlloyDatasets"]
         )
 
     ]
