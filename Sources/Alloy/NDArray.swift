@@ -106,6 +106,38 @@ public class NDArray: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(self))
     }
+    
+    public func toArray() throws -> [Float] {
+        guard let rawData = self.data else {
+            return []
+        }
+        
+        let elementCount = shape.reduce(1, *)
+        let expectedByteCount = elementCount * MemoryLayout<Float>.size
+        
+        // Compare the size in bytes, not the size in elements
+        if rawData.count != expectedByteCount {
+            throw NDArrayError.operationError("""
+            NDArray(shape: \(shape), 
+                    data byte-count: \(rawData.count) 
+                    != expected byte-count: \(expectedByteCount))
+            """)
+        }
+        
+        // Now convert bytes to [Float] for representation
+        let floatArray = rawData.toFloatArray() ?? []
+        
+        // If the float array is empty or has a mismatch, bail early
+        if floatArray.count != elementCount {
+            throw NDArrayError.operationError("""
+            NDArray(shape: \(shape), 
+                    data float-count: \(floatArray.count) 
+                    != expected float-count: \(elementCount))
+            """)
+        }
+        
+        return floatArray
+    }
 }
 
 // MARK: - DAG Helpers

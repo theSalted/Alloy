@@ -136,7 +136,7 @@ extension NDArray {
     ///   - rhs: The `Float` to add.
     /// - Returns: A new `NDArray` representing the element-wise sum.
     public static func +(_ lhs: NDArray, _ rhs: Float) -> NDArray {
-        lhs + NDArray([rhs], shape: [1], label: "rhs")
+        lhs + NDArray([rhs], shape: [1], label: "rhs").broadcasted(lhs.shape)
     }
     
     /// Subtracts a `Float` from an `NDArray` element-wise.
@@ -146,7 +146,7 @@ extension NDArray {
     ///   - rhs: The `Float` to subtract.
     /// - Returns: A new `NDArray` representing the element-wise difference.
     public static func -(_ lhs: NDArray, _ rhs: Float) -> NDArray {
-        lhs - NDArray([rhs], shape: [1], label: "rhs")
+        lhs - NDArray([rhs], shape: [1], label: "rhs").broadcasted(lhs.shape)
     }
     
     /// Multiplies an `NDArray` by a `Float` element-wise.
@@ -156,7 +156,7 @@ extension NDArray {
     ///   - rhs: The `Float` to multiply.
     /// - Returns: A new `NDArray` representing the element-wise product.
     public static func *(_ lhs: NDArray, _ rhs: Float) -> NDArray {
-        lhs * NDArray([rhs], shape: [1], label: "rhs")
+        lhs * NDArray([rhs], shape: [1], label: "rhs").broadcasted(lhs.shape)
     }
     
     /// Divides an `NDArray` by a `Float` element-wise.
@@ -166,7 +166,7 @@ extension NDArray {
     ///   - rhs: The `Float` denominator.
     /// - Returns: A new `NDArray` representing the element-wise division.
     public static func /(_ lhs: NDArray, _ rhs: Float) -> NDArray {
-        lhs / NDArray([rhs], shape: [1], label: "rhs")
+        lhs / NDArray([rhs], shape: [1], label: "rhs").broadcasted(lhs.shape)
     }
     
     // MARK: - Binary Operators (Float ↔ NDArray)
@@ -180,7 +180,7 @@ extension NDArray {
     public static func +(_ lhs: Float, _ rhs: NDArray) -> NDArray {
         // Wrap the Float into an NDArray with shape [1]
         let lhsNDArray = NDArray([lhs], shape: [1], label: "lhs")
-        return lhsNDArray + rhs
+        return lhsNDArray.broadcasted(rhs.shape) + rhs
     }
     
     /// Subtracts an `NDArray` from a `Float` element-wise.
@@ -192,7 +192,7 @@ extension NDArray {
     public static func -(_ lhs: Float, _ rhs: NDArray) -> NDArray {
         // Wrap the Float into an NDArray with shape [1]
         let lhsNDArray = NDArray([lhs], shape: [1], label: "lhs")
-        return lhsNDArray - rhs
+        return lhsNDArray.broadcasted(rhs.shape) - rhs
     }
     
     /// Multiplies a `Float` by an `NDArray` element-wise.
@@ -204,7 +204,7 @@ extension NDArray {
     public static func *(_ lhs: Float, _ rhs: NDArray) -> NDArray {
         // Wrap the Float into an NDArray with shape [1]
         let lhsNDArray = NDArray([lhs], shape: [1], label: "lhs")
-        return lhsNDArray * rhs
+        return lhsNDArray.broadcasted(rhs.shape) * rhs
     }
     
     /// Divides a `Float` by an `NDArray` element-wise.
@@ -216,7 +216,7 @@ extension NDArray {
     public static func /(_ lhs: Float, _ rhs: NDArray) -> NDArray {
         // Wrap the Float into an NDArray with shape [1]
         let lhsNDArray = NDArray([lhs], shape: [1], label: "lhs")
-        return lhsNDArray / rhs
+        return lhsNDArray.broadcasted(rhs.shape) / rhs
     }
     
     // MARK: - Unary Operators
@@ -268,7 +268,7 @@ extension NDArray {
     /// - Returns: A new `NDArray` representing the element-wise exponentiation.
     /// - Throws: `NDArrayError.operationError` if the number of inputs is incorrect.
     public static func ^ (lhs: NDArray, rhs: Float) -> NDArray {
-        lhs ^ NDArray([rhs], shape: [1], label: "rhs")
+        lhs ^ NDArray([rhs], shape: [1], label: "rhs").broadcasted(lhs.shape)
     }
     
     /// Raises a `Float` to the power of `rhs`, element-wise.
@@ -279,7 +279,7 @@ extension NDArray {
     /// - Returns: A new `NDArray` representing the element-wise exponentiation.
     /// - Throws: `NDArrayError.operationError` if the number of inputs is incorrect.
     public static func ^ (lhs: Float, rhs: NDArray) -> NDArray {
-        NDArray([lhs], shape: [1], label: "lhs") ^ rhs
+        NDArray([lhs], shape: [1], label: "lhs").broadcasted(rhs.shape) ^ rhs
     }
     
     // MARK: - Modulus (%)
@@ -319,7 +319,7 @@ extension NDArray {
     /// - Returns: A new `NDArray` representing the element-wise modulus.
     /// - Throws: `NDArrayError.operationError` if the number of inputs is incorrect.
     public static func % (lhs: NDArray, rhs: Float) -> NDArray {
-        lhs % NDArray([rhs], shape: [1], label: "rhs")
+        lhs % NDArray([rhs], shape: [1], label: "rhs").broadcasted(lhs.shape)
     }
     
     /// Computes the modulus of a `Float` by `rhs`, element-wise.
@@ -330,7 +330,7 @@ extension NDArray {
     /// - Returns: A new `NDArray` representing the element-wise modulus.
     /// - Throws: `NDArrayError.operationError` if the number of inputs is incorrect.
     public static func % (lhs: Float, rhs: NDArray) -> NDArray {
-        NDArray([lhs], shape: [1], label: "lhs") % rhs
+        NDArray([lhs], shape: [1], label: "lhs").broadcasted(rhs.shape) % rhs
     }
     
     // MARK: - Comparisons (>, <, ==, !=)
@@ -680,5 +680,96 @@ extension NDArray {
     /// - Returns: A new `NDArray` broadcasted to the specified shape.
     public func broadcasted(_ shape: [Int]) -> NDArray {
         return broadcast(self, to: shape)
+    }
+}
+
+
+extension NDArray {
+    /// Creates an NDArray that is the one-hot encoding of `indices`.
+    /// - Parameters:
+    ///   - indices: NDArray of integer indices, e.g., shape [N].
+    ///   - depth: The size of the one-hot dimension (number of classes).
+    ///   - axis: The position at which to insert the new dimension.
+    ///     - For example, -1 means append it at the end.
+    ///   - dataType: The output MPSDataType (usually .float32).
+    ///   - label: Optional name/label.
+    /// - Returns: A *lazy* NDArray that will become `[N, depth]` if `axis == -1`.
+    public static func oneHot(
+        indices: NDArray,
+        depth: Int,
+        axis: Int = -1,
+        dataType: MPSDataType = .float32,
+        label: String? = nil
+    ) -> NDArray {
+        // Ensure the indices tensor has integer data type
+        // If not, cast it. Here, we assume it's Int32
+        precondition(indices.data != nil, "Indices NDArray must have data.")
+        
+        // Determine new shape by inserting 'depth' at the specified axis
+        var newShape = indices.shape
+        let rank = newShape.count
+        let insertAxis = axis >= 0 ? axis : rank + axis + 1
+        precondition(insertAxis >= 0 && insertAxis <= rank, "Axis \(axis) out of bounds for shape \(indices.shape)")
+        newShape.insert(depth, at: insertAxis)
+        
+        return NDArray(
+            shape: newShape,
+            label: label ?? "oneHot",
+            parents: [indices],
+            op: { graph, inputs, nodeLabel in
+                guard inputs.count == 1 else {
+                    throw NDArrayError.operationError("oneHot op expects exactly 1 input.")
+                }
+                
+                let indicesTensor = inputs[0]
+                
+                // Assuming indices are stored as Int32. If not, cast them.
+                // Here, we add a cast if necessary.
+                let castedIndices: MPSGraphTensor
+                if indicesTensor.dataType != .int32 {
+                    castedIndices = graph.cast(
+                        indicesTensor,
+                        to: .int32,
+                        name: "\(nodeLabel ?? "oneHot")_cast"
+                    )
+                } else {
+                    castedIndices = indicesTensor
+                }
+                
+                // Create one-hot tensor
+                let oneHotTensor = graph.oneHot(
+                    withIndicesTensor: castedIndices,
+                    depth: depth,
+                    axis: axis,
+                    dataType: dataType,
+                    name: nodeLabel
+                )
+                
+                return oneHotTensor
+            }
+        )
+    }
+}
+
+
+extension NDArray {
+    /// Casts the NDArray to a different data type.
+    /// - Parameter dataType: The target MPSDataType.
+    /// - Returns: A new NDArray with the desired data type.
+    public func cast(to dataType: MPSDataType, label: String? = nil) -> NDArray {
+        return NDArray(
+            shape: self.shape,
+            label: label ?? "cast(\(self.label ?? "?"))",
+            parents: [self]
+        ) { graph, inputs, nodeLabel in
+            guard inputs.count == 1 else {
+                throw NDArrayError.operationError("cast op expects exactly 1 input.")
+            }
+            return graph.cast(
+                inputs[0],
+                to: dataType,
+                name: nodeLabel
+            )
+        }
     }
 }
