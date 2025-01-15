@@ -13,7 +13,7 @@ import Foundation
 struct GraphBuilder {
     
     /// Build an MPSGraph from the DAG, returning the final MPSGraphTensor for the `root`.
-    static func buildGraph(from root: NDArray) throws -> (MPSGraph, MPSGraphTensor) {
+    static func buildGraph(from root: NDArray) throws -> (MPSGraph, [NDArray : MPSGraphTensor]) {
         let sortedNodes = root.topologicalSort()
         guard !sortedNodes.isEmpty else {
             throw NDArrayError.emptyDAG("Root NDArray produced an empty DAG.")
@@ -56,12 +56,7 @@ struct GraphBuilder {
             }
         }
         
-        // The final node’s MPSGraphTensor
-        guard let finalTensor = nodeToTensor[root] else {
-            throw NDArrayError.operationError("No final tensor for root NDArray.")
-        }
-        
-        return (graph, finalTensor)
+        return (graph, nodeToTensor)
     }
     
     /// Build an MPSGraph from multiple NDArray roots.

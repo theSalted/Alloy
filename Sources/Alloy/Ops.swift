@@ -307,3 +307,31 @@ public func flatten(_ x: NDArray) -> NDArray {
     return x.reshaped([N, C*H*W])
 }
 
+
+/// Slices the NDArray from start indices to end indices (exclusive).
+/// - Parameters:
+///   - start: Starting indices for each dimension.
+///   - end: Ending indices for each dimension (exclusive).
+/// - Returns: A new NDArray representing the sliced tensor.
+public func slice(_ x: NDArray, start: [Int], end: [Int], label: String? = nil) throws -> NDArray {
+    guard start.count == x.shape.count, end.count == x.shape.count else {
+        throw NDArrayError.operationError("Start and end indices must match the number of dimensions.")
+    }
+    
+                
+    // Assuming MPSGraph has a slicing operation. If not, implement it.
+    // Here's a hypothetical implementation:
+    return NDArray(
+        shape: end.enumerated().map { $0.element - start[$0.offset] },
+        label: label ?? "slice",
+        parents: [x]
+    ) { graph, inputs, nodeLabel in
+        guard inputs.count == 1 else {
+            throw NDArrayError.operationError("Slice op expects exactly 1 input.")
+        }
+        let strides = Array(repeating: 1, count: x.shape.count).toNSNumberArray()
+        let slicedTensor = graph.sliceTensor(inputs[0], starts: start.toNSNumberArray(), ends: end.toNSNumberArray(), strides: strides, name: nodeLabel)
+        
+        return slicedTensor
+    }
+}

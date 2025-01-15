@@ -39,6 +39,8 @@ public class NDArray: Hashable {
     /// If `nil`, and `op == nil`, this node becomes a placeholder during graph building.
     public var data: Data?
     
+    public var grad: Data?
+
     /// A list of parent NDArrays. If this node is an internal operation node,
     /// the operation `op` is applied to all parents’ outputs.
     public var parents: [NDArray] = []
