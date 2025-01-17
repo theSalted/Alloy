@@ -18,22 +18,29 @@ extension NDArray {
     ///
     /// **Note**: This assumes the `MPSNDArray` is in `.float32` format.
     /// If you have a different data type, you must handle conversion before or after creating the NDArray.
-    public convenience init(mpsArray: MPSNDArray, label: String? = nil) {
+    public convenience init(mpsArray: MPSNDArray, shape: [Int]? = nil, label: String? = nil) {
         // Retrieve the descriptor by calling mpsArray.descriptor()
         let desc = mpsArray.descriptor()
         
         // Use numberOfDimensions to figure out how many dimensions are in the MPSNDArray
         let dimensionCount = desc.numberOfDimensions
         
-        // Build the shape array by querying each dimension’s length
-        var extractedShape = [Int]()
-        extractedShape.reserveCapacity(dimensionCount)
-        for i in 0..<dimensionCount {
-            extractedShape.append(Int(desc.length(ofDimension: i)))
-        }
+        let shape: [Int] = {
+            guard let shape else {
+                // Build the shape array by querying each dimension’s length
+                var extractedShape = [Int]()
+                extractedShape.reserveCapacity(dimensionCount)
+                for i in 0..<dimensionCount {
+                    extractedShape.append(Int(desc.length(ofDimension: i)))
+                }
+                return extractedShape
+            }
+            return shape
+        }()
+        
         
         // Calculate how many total elements
-        let elementCount = extractedShape.reduce(1, *)
+        let elementCount = shape.reduce(1, *)
         
         // Assume the MPSNDArray data is float32, so total bytes = elementCount * 4
         let byteCount = elementCount * MemoryLayout<Float>.size
@@ -48,7 +55,7 @@ extension NDArray {
         }
         
         // Use the existing NDArray init for a leaf node
-        self.init(shape: extractedShape, label: label)
+        self.init(shape: shape, label: label)
         
         // Store the data we just copied
         self.data = buffer

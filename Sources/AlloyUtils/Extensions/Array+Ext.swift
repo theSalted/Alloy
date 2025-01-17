@@ -7,26 +7,26 @@
 
 import Foundation
 
-extension Array where Element == Int {
+public extension Array where Element == Int {
     /// Converts an array of Ints to an array of NSNumbers.
     func toNSNumberArray() -> [NSNumber] {
         return self.map { NSNumber(value: $0) }
     }
 }
 
-extension Array where Element == NSNumber {
+public extension Array where Element == NSNumber {
     /// Converts an array of NSNumbers to an array of Ints.
     func toIntArray() -> [Int] {
         return self.compactMap { $0.intValue }
     }
 }
 
-extension Array where Element == Float {
+public extension Array where Element == Float {
     /// Converts an array of `Float` back to `Data`.
     /// - Parameter shape: The shape (dimensions) for which the array is valid.
     /// - Throws: A runtime error (via `preconditionFailure`) if the array count
     ///   does not match the product of the shape dimensions.
-    public func toData(shape: [Int]) -> Data {
+    func toData(shape: [Int]) -> Data {
         // Compute total elements from the shape
         let prod = shape.reduce(1, *)
         

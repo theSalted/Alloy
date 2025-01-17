@@ -13,14 +13,16 @@ let package = Package(
         .library(name: "AlloyRandom", targets: ["AlloyRandom"]),
         .library(name: "AlloyDatasets", targets: ["AlloyDatasets"]),
         .library(name: "AlloyNN", targets: ["AlloyNN"]),
-        .executable(name: "AlloyExample", targets: ["AlloyExample"])
+        .library(name: "AlloyUtils", targets: ["AlloyUtils"]),
+        .executable(name: "AlloyExamples", targets: ["AlloyExamples"])
     ],
     targets: [
-        .target(name: "Alloy"),
+        .target(name: "Alloy", dependencies: ["AlloyUtils"]),
         .target(name: "AlloyRandom", dependencies: ["Alloy"]),
         .target(name: "AlloyDatasets", dependencies: ["Alloy"]),
         .target(name: "AlloyNN", dependencies: ["Alloy"]),
-        .executableTarget(name: "AlloyExample", dependencies: ["Alloy", "AlloyDatasets", "AlloyRandom"]),
+        .target(name: "AlloyUtils"),
+        .executableTarget(name: "AlloyExamples", dependencies: ["Alloy", "AlloyDatasets", "AlloyRandom", "AlloyUtils"]),
         
         // Add a test target that depends on "Alloy" and the "Testing" framework
         .testTarget(

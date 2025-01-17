@@ -86,25 +86,27 @@ public class MNIST {
             throw MNISTError.downloadFailed("Invalid batch size: \(actualBatchSize). Must be between 1 and \(imageCount).")
         }
 
-        let imageShape = [actualBatchSize as NSNumber, MNISTSize * MNISTSize as NSNumber]
+        // Updated imageShape to include the channel dimension
+        let imageShape = [actualBatchSize as NSNumber, 1 as NSNumber, MNISTSize as NSNumber, MNISTSize as NSNumber]
         let labelShape = [actualBatchSize as NSNumber, MNISTNumClasses as NSNumber]
-        
+
         let inputDesc = MPSNDArrayDescriptor(dataType: .float32, shape: imageShape)
         let labelDesc = MPSNDArrayDescriptor(dataType: .float32, shape: labelShape)
-        
+
         let inputs = MPSNDArray(device: device, descriptor: inputDesc)
         let labelsArray = MPSNDArray(device: device, descriptor: labelDesc)
-        
-        var inputBuffer = [Float](repeating: 0, count: actualBatchSize * MNISTSize * MNISTSize)
+
+        // Adjust the buffer size to account for the additional channel dimension
+        var inputBuffer = [Float](repeating: 0, count: actualBatchSize * 1 * MNISTSize * MNISTSize)
         var labelBuffer = [Float](repeating: 0, count: actualBatchSize * MNISTNumClasses)
-        
+
         for i in 0..<actualBatchSize {
             let index = Int.random(in: 0..<imageCount)
             let imageOffset = MNISTImageMetadataPrefixSize + index * MNISTSize * MNISTSize
             let labelOffset = MNISTLabelsMetadataPrefixSize + index
 
             for pixel in 0..<(MNISTSize * MNISTSize) {
-                inputBuffer[i * MNISTSize * MNISTSize + pixel] = Float(images[imageOffset + pixel]) / 255.0
+                inputBuffer[i * 1 * MNISTSize * MNISTSize + pixel] = Float(images[imageOffset + pixel]) / 255.0
             }
 
             let label = labels[labelOffset]
@@ -112,11 +114,11 @@ public class MNIST {
                 labelBuffer[i * MNISTNumClasses + classIndex] = (classIndex == label ? 1.0 : 0.0)
             }
         }
-        
+
         inputs.writeBytes(&inputBuffer, strideBytes: nil)
         labelsArray.writeBytes(&labelBuffer, strideBytes: nil)
-        
-        return (NDArray(mpsArray: inputs), NDArray(mpsArray: labelsArray))
+
+        return (NDArray(mpsArray: inputs, shape: imageShape.toIntArray()), NDArray(mpsArray: labelsArray))
     }
 
     /// Retrieves a training batch. If `batchSize` is nil, returns the entire training dataset.

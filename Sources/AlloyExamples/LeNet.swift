@@ -69,6 +69,7 @@ public func buildLeNet() -> [String: NDArray] {
 
 /// Forward pass of LeNet. Expects input shape: [N, 1, 28, 28].
 public func lenetForward(_ x: NDArray, _ p: [String: NDArray]) throws -> NDArray {
+    print("lenetForward input shape:", x.shape)
     // Conv1 + relu + pool
     let c1 = try conv2d(
         input: x,
@@ -114,7 +115,6 @@ public func lenetForward(_ x: NDArray, _ p: [String: NDArray]) throws -> NDArray
     return fc3
 }
 
-
 public func trainLeNet(
     trainX: NDArray,
     trainY: NDArray,
@@ -125,7 +125,7 @@ public func trainLeNet(
     learningRate: Float
 ) throws {
     // 1) Build parameter dictionary
-    let params = buildLeNet()
+    let params = buildLeNet() // Make it mutable if needed for updates
     
     // 2) Determine the number of training samples
     let trainCount = trainY.shape[0]
@@ -142,7 +142,7 @@ public func trainLeNet(
         // 4) Iterate over mini-batches
         for step in 0..<stepsPerEpoch {
             let startIdx = step * batchSize
-            let endIdx = startIdx + batchSize
+            let endIdx = min(startIdx + batchSize, trainCount)
             
             // 5) Slice out the mini-batch from trainX and trainY
             let xBatch = try slice(trainX, start: [startIdx, 0, 0, 0], end: [endIdx, trainX.shape[1], trainX.shape[2], trainX.shape[3]])
@@ -164,8 +164,8 @@ public func trainLeNet(
             let loss = try softmaxCrossEntropy(logits: logits, labels: oneHotLabels)
             
             // 9) Perform SGD update
-            let params = params.map {$1}
-            try SGD(loss: loss, params: params, learningRate: learningRate)
+            // Assuming SGD updates params in-place or returns updated params
+            try SGD(loss: loss, params: params.values.map { $0 }, learningRate: learningRate)
             
             // 10) Optionally fetch the float loss for logging
             try run(loss) // Evaluate the loss tensor
@@ -176,20 +176,8 @@ public func trainLeNet(
         avgLoss /= Float(stepsPerEpoch)
         
         // 11) Evaluate on the test set
-        // For demonstration, we'll use the entire test set as one batch
-//        let testBatchSize = testY.shape[0]
-//        let testOneHotLabels = NDArray.oneHot(
-//            indices: testY,
-//            depth: 10,
-//            axis: -1,
-//            dataType: .float32,
-//            label: "testOneHotLabels"
-//        )
-        
-        
-        
         let testLogits = try lenetForward(testX, params)
-        let testAcc = try accuracy(logits: testLogits, trueLabels: try testY.toArray().map{Int($0)})
+        let testAcc = try accuracy(logits: testLogits, trueLabels: try testY.toArray().map { Int($0) })
         
         print("Epoch \(epoch), loss=\(avgLoss), testAcc=\(testAcc)")
     }
