@@ -339,6 +339,12 @@ extension NDArray {
     // returning another NDArray is non-standard in Swift.
     // Proceed with caution.
     
+    // MARK: - Comparisons (>, <, ==, !=)
+    //
+    // WARNING: Overriding these for NDArray → NDArray
+    // returning another NDArray is non-standard in Swift.
+    // Proceed with caution.
+
     /// Compares two NDArrays element-wise, returns 1.0 if `lhs` > `rhs`, else 0.0.
     ///
     /// - Parameters:
@@ -362,11 +368,14 @@ extension NDArray {
             guard inputs.count == 2 else {
                 throw NDArrayError.operationError("`>` operator expects exactly 2 inputs.")
             }
-            // Suppose your graph has `greater()`:
-            return graph.greaterThan(inputs[0], inputs[1], name: nodeLabel)
+            // Perform the greater-than comparison
+            let comparisonResult = graph.greaterThan(inputs[0], inputs[1], name: nodeLabel)
+            // Cast the boolean result to float (1.0 for true, 0.0 for false)
+            let floatResult = graph.cast(comparisonResult, to: .float32, name: "\(String(describing: nodeLabel))_cast")
+            return floatResult
         }
     }
-    
+
     /// Compares two NDArrays element-wise, returns 1.0 if `lhs` < `rhs`, else 0.0.
     ///
     /// - Parameters:
@@ -390,10 +399,14 @@ extension NDArray {
             guard inputs.count == 2 else {
                 throw NDArrayError.operationError("`<` operator expects exactly 2 inputs.")
             }
-            return graph.lessThan(inputs[0], inputs[1], name: nodeLabel)
+            // Perform the less-than comparison
+            let comparisonResult = graph.lessThan(inputs[0], inputs[1], name: nodeLabel)
+            // Cast the boolean result to float (1.0 for true, 0.0 for false)
+            let floatResult = graph.cast(comparisonResult, to: .float32, name: "\(String(describing: nodeLabel))_cast")
+            return floatResult
         }
     }
-    
+
     /// Compares two NDArrays element-wise, returns 1.0 if `lhs` == `rhs`, else 0.0.
     ///
     /// - Parameters:
@@ -417,10 +430,14 @@ extension NDArray {
             guard inputs.count == 2 else {
                 throw NDArrayError.operationError("`==` operator expects exactly 2 inputs.")
             }
-            return graph.equal(inputs[0], inputs[1], name: nodeLabel)
+            // Perform the equality comparison
+            let comparisonResult = graph.equal(inputs[0], inputs[1], name: nodeLabel)
+            // Cast the boolean result to float (1.0 for true, 0.0 for false)
+            let floatResult = graph.cast(comparisonResult, to: .float32, name: "\(nodeLabel ?? "==")_cast")
+            return floatResult
         }
     }
-    
+
     /// Compares two NDArrays element-wise, returns 1.0 if `lhs` != `rhs`, else 0.0.
     ///
     /// - Parameters:
@@ -444,7 +461,11 @@ extension NDArray {
             guard inputs.count == 2 else {
                 throw NDArrayError.operationError("`!=` operator expects exactly 2 inputs.")
             }
-            return graph.notEqual(inputs[0], inputs[1], name: nodeLabel)
+            // Perform the not-equal comparison
+            let comparisonResult = graph.notEqual(inputs[0], inputs[1], name: nodeLabel)
+            // Cast the boolean result to float (1.0 for true, 0.0 for false)
+            let floatResult = graph.cast(comparisonResult, to: .float32, name: "\(String(describing: nodeLabel))_cast")
+            return floatResult
         }
     }
     
