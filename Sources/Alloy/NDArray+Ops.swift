@@ -559,20 +559,57 @@ extension NDArray {
     // MARK: - Reduction Operations
     /// Computes the reduction sum of all elements in the `NDArray`.
     public func sum(axis: Int? = nil) -> NDArray {
-        let label = "\(self.label ?? "NDArray").sum()"
-        
+        let label: String
+        var newShape: [Int]
+        var reductionAxes: [Int]
+
+        if let axis = axis {
+            label = "\(self.label ?? "NDArray").sum(axis: \(axis))"
+            newShape = self.shape
+            // Normalize axis
+            let normalizedAxis = axis >= 0 ? axis : (self.shape.count + axis)
+            guard normalizedAxis >= 0 && normalizedAxis < self.shape.count else {
+                fatalError("Axis \(axis) is out of bounds for shape \(self.shape)")
+            }
+            newShape.remove(at: normalizedAxis)
+            reductionAxes = [normalizedAxis]
+        } else {
+            label = "\(self.label ?? "NDArray").sum()"
+            newShape = [1] // Represent scalar as [1]
+            reductionAxes = Array(0..<self.shape.count) // sum over all axes
+        }
+
         return NDArray(
-            shape: [], // Scalar result
+            shape: newShape,
             label: label,
             parents: [self]
         ) { graph, inputs, nodeLabel in
             guard inputs.count == 1 else {
                 throw NDArrayError.operationError("`sum` operation expects exactly 1 input.")
             }
-            if let axis {
-                return graph.reductionSum(with: inputs[0], axis: axis, name: nodeLabel)
-            }
-            return graph.reductionSum(with: inputs[0], axes: [], name: nodeLabel)
+
+            // Convert [Int] to [NSNumber]
+            let axesAsNSNumber = reductionAxes.map { NSNumber(value: $0) }
+
+            // Perform the sum
+            let sumTensor = graph.reductionSum(
+                with: inputs[0],
+                axes: axesAsNSNumber,
+                name: nodeLabel
+            )
+
+            // Verify the sumTensor's data type before casting
+            // Assuming you have a way to inspect sumTensor's data type
+            // If it's already float32, casting might be unnecessary
+            // Uncomment the following lines if casting is needed
+
+            /*
+            let float32Tensor = graph.cast(sumTensor, to: .float32, name: "\(String(describing: nodeLabel))_float32")
+            return float32Tensor
+            */
+
+            // Return the sumTensor directly if it's already float32
+            return sumTensor
         }
     }
     
