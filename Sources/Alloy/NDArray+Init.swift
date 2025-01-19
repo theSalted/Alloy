@@ -18,9 +18,10 @@ extension NDArray {
     ///
     /// **Note**: This assumes the `MPSNDArray` is in `.float32` format.
     /// If you have a different data type, you must handle conversion before or after creating the NDArray.
-    public convenience init(mpsArray: MPSNDArray, shape: [Int]? = nil, label: String? = nil) {
+    public convenience init(mpsArray: MPSNDArray, shape: [Int]?, label: String? = nil) {
         // Retrieve the descriptor by calling mpsArray.descriptor()
         let desc = mpsArray.descriptor()
+        
         
         // Use numberOfDimensions to figure out how many dimensions are in the MPSNDArray
         let dimensionCount = desc.numberOfDimensions

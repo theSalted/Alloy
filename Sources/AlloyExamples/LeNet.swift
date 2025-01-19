@@ -81,8 +81,12 @@ public func lenetForward(_ x: NDArray, _ p: [String: NDArray]) throws -> NDArray
         groups: 1,
         label: "conv1"
     )
+    
     let r1 = relu(c1, label: "relu1")
+    print("r1 shape:", r1.shape)
+    
     let p1 = maxPool2d(r1, kernelSize: (2,2), stride: (2,2), label: "pool1")
+    print("p1 shape:", p1.shape)
     
     // Conv2 + relu + pool
     let c2 = try conv2d(
@@ -95,22 +99,33 @@ public func lenetForward(_ x: NDArray, _ p: [String: NDArray]) throws -> NDArray
         groups: 1,
         label: "conv2"
     )
+    print("c2 shape:", c2.shape)
+    
     let r2 = relu(c2, label: "relu2")
+    print("r2 shape:", r2.shape)
+    
     let p2 = maxPool2d(r2, kernelSize: (2,2), stride: (2,2), label: "pool2")
+    print("p2 shape:", p2.shape)
     
     // Flatten
     let f = flatten(p2)
+    print("f shape:", f.shape)
     
     // FC1 + relu
     let fc1 = try linear(f, weight: p["fc1_w"]!, bias: p["fc1_b"]!)
+    print("fc1 shape:", fc1.shape)
     let r3 = relu(fc1, label: "relu3")
+    print("r3 shape:", r3.shape)
     
     // FC2 + relu
     let fc2 = try linear(r3, weight: p["fc2_w"]!, bias: p["fc2_b"]!)
+    print("fc2 shape:", fc2.shape)
     let r4 = relu(fc2, label: "relu4")
+    print("r4 shape:", r4.shape)
     
-    // FC3 => logits
+    // FC3 => logits*
     let fc3 = try linear(r4, weight: p["fc3_w"]!, bias: p["fc3_b"]!)
+    print("fc3 shape:", fc3.shape)
     // No activation => these are final logits
     return fc3
 }
@@ -146,16 +161,21 @@ public func trainLeNet(
             
             // 5) Slice out the mini-batch from trainX and trainY
             let xBatch = try slice(trainX, start: [startIdx, 0, 0, 0], end: [endIdx, trainX.shape[1], trainX.shape[2], trainX.shape[3]])
-            let yBatch = try slice(trainY, start: [startIdx], end: [endIdx])
+            print("LeNet trainY shape: ", trainY.shape)
+            let yBatch = try slice(trainY,
+                                   start: [startIdx, 0],
+                                   end:   [endIdx,   10])
             
             // 6) Convert labels to one-hot encoding using MPSGraph's oneHot
-            let oneHotLabels = NDArray.oneHot(
-                indices: yBatch,
-                depth: 10,
-                axis: -1,
-                dataType: .float32,
-                label: "oneHotLabels"
-            )
+//            let oneHotLabels = NDArray.oneHot(
+//                indices: yBatch,
+//                depth: 10,
+//                axis: -1,
+//                dataType: .float32,
+//                label: "oneHotLabels"
+//            )
+            
+            let oneHotLabels = yBatch
             
             // 7) Forward pass
             let logits = try lenetForward(xBatch, params)

@@ -118,7 +118,7 @@ public class MNIST {
         inputs.writeBytes(&inputBuffer, strideBytes: nil)
         labelsArray.writeBytes(&labelBuffer, strideBytes: nil)
 
-        return (NDArray(mpsArray: inputs, shape: imageShape.toIntArray()), NDArray(mpsArray: labelsArray))
+        return (NDArray(mpsArray: inputs, shape: imageShape.toIntArray()), NDArray(mpsArray: labelsArray, shape: labelShape.toIntArray()))
     }
 
     /// Retrieves a training batch. If `batchSize` is nil, returns the entire training dataset.

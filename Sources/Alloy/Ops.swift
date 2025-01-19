@@ -108,8 +108,8 @@ public func conv2d(
     
     // Determine data and weight layouts
     // Assuming NCHW layout
-    convDesc.dataLayout = .NCHW
-    convDesc.weightsLayout = .NCHW
+    convDesc.dataLayout = .NHWC
+    convDesc.weightsLayout = .NHWC
     
     // Parents: input, weights, (optional) bias
     var parents: [NDArray] = [input, weights]
@@ -187,48 +187,60 @@ public func maxPool2d(
     padding: (Int, Int, Int, Int) = (0,0,0,0),
     label: String? = nil
 ) -> NDArray {
-    let strideH = stride?.0 ?? kernelSize.0
-    let strideW = stride?.1 ?? kernelSize.1
+    let (kernelH, kernelW) = kernelSize
     let (padLeft, padRight, padTop, padBottom) = padding
     
-    // Compute output shape manually
+    // Default stride to the kernel if not provided
+    let strideH = stride?.0 ?? kernelH
+    let strideW = stride?.1 ?? kernelW
+    
+    // Manual shape calculation (just for NDArray metadata)
     let N = input.shape[0]
     let C = input.shape[1]
     let H_in = input.shape[2]
     let W_in = input.shape[3]
-    
-    let H_out = ((H_in + padTop + padBottom - kernelSize.0) / strideH) + 1
-    let W_out = ((W_in + padLeft + padRight - kernelSize.1) / strideW) + 1
+    let H_out = ((H_in + padTop + padBottom - kernelH) / strideH) + 1
+    let W_out = ((W_in + padLeft + padRight - kernelW) / strideW) + 1
     
     let outShape = [N, C, H_out, W_out]
-    let nodeLabel = label ?? "maxPool2d(\(kernelSize))"
     
     return NDArray(
         shape: outShape,
-        label: nodeLabel,
+        label: label ?? "maxPool2d(\(kernelSize))",
         parents: [input]
     ) { graph, inputs, opLabel in
         guard inputs.count == 1 else {
             throw NDArrayError.operationError("maxPool2d expects 1 input.")
         }
+        
         let poolDesc = MPSGraphPooling2DOpDescriptor()
-        poolDesc.strideInX = strideW
+        // Make sure to set these so the GPU actually does 2×2 pooling:
+        poolDesc.kernelHeight = kernelH
+        poolDesc.kernelWidth  = kernelW
+        
         poolDesc.strideInY = strideH
+        poolDesc.strideInX = strideW
         
-//        poolDesc.windowWidth = kernelSize.1
-//        poolDesc.windowHeight = kernelSize.0
-        poolDesc.paddingLeft = padLeft
-        poolDesc.paddingRight = padRight
-        poolDesc.paddingTop = padTop
+        // If you intend no dilation, set them to 1
+        poolDesc.dilationRateInY = 1
+        poolDesc.dilationRateInX = 1
+        
+        // Explicit padding
+        poolDesc.paddingLeft   = padLeft
+        poolDesc.paddingRight  = padRight
+        poolDesc.paddingTop    = padTop
         poolDesc.paddingBottom = padBottom
-        poolDesc.paddingStyle = .explicit
-        poolDesc.dataLayout = .NCHW
+        poolDesc.paddingStyle  = .explicit
         
-        // MPSGraph has maxPooling2D
-        let result = graph.maxPooling2D(withSourceTensor: inputs[0],
-                                        descriptor: poolDesc,
-                                        name: opLabel)
-        return result
+        // NCHW layout
+        poolDesc.dataLayout = .NCHW
+
+        // Let MPSGraph do the actual max pool op
+        return graph.maxPooling2D(
+            withSourceTensor: inputs[0],
+            descriptor: poolDesc,
+            name: opLabel
+        )
     }
 }
 
@@ -308,6 +320,8 @@ public func flatten(_ x: NDArray) -> NDArray {
 }
 
 
+
+
 /// Slices the NDArray from start indices to end indices (exclusive).
 /// - Parameters:
 ///   - start: Starting indices for each dimension.
@@ -315,7 +329,7 @@ public func flatten(_ x: NDArray) -> NDArray {
 /// - Returns: A new NDArray representing the sliced tensor.
 public func slice(_ x: NDArray, start: [Int], end: [Int], label: String? = nil) throws -> NDArray {
     guard start.count == x.shape.count, end.count == x.shape.count else {
-        throw NDArrayError.operationError("Start and end indices must match the number of dimensions.")
+        throw NDArrayError.operationError("Start and end indices must match the number of dimensions. Start count \(start.count); x.shape.count \(x.shape.count); end count \(end.count);")
     }
     
                 
@@ -334,4 +348,30 @@ public func slice(_ x: NDArray, start: [Int], end: [Int], label: String? = nil) 
         
         return slicedTensor
     }
+}
+
+/// Slices the NDArray by applying the same start and end indices to all dimensions.
+/// - Parameters:
+///   - x: The NDArray to be sliced.
+///   - start: The starting index for each dimension.
+///   - end: The ending index for each dimension (exclusive).
+///   - label: An optional label for the operation.
+/// - Returns: A new NDArray representing the sliced tensor.
+public func slice(_ x: NDArray, start: Int, end: Int, label: String? = nil) throws -> NDArray {
+    // Ensure that start and end are within the valid range for all dimensions
+    for (dim, dimSize) in x.shape.enumerated() {
+        guard start >= 0, end <= dimSize, start <= end else {
+            throw NDArrayError.operationError("""
+                Invalid slice indices for dimension \(dim):
+                start: \(start), end: \(end), dimension size: \(dimSize)
+                """)
+        }
+    }
+    
+    // Create start and end arrays by repeating the provided start and end for each dimension
+    let startIndices = Array(repeating: start, count: x.shape.count)
+    let endIndices = Array(repeating: end, count: x.shape.count)
+    
+    // Delegate to the existing slice function
+    return try slice(x, start: startIndices, end: endIndices, label: label)
 }

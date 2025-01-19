@@ -39,6 +39,8 @@ do {
     let epochs = 1
     let lr: Float = 0.01
     
+    print("Main trainY Shape: ", trainY.shape)
+    
     try trainLeNet(
         trainX: trainX,
         trainY: trainY,

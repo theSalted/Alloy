@@ -701,10 +701,6 @@ extension NDArray {
         dataType: MPSDataType = .float32,
         label: String? = nil
     ) -> NDArray {
-        // Ensure the indices tensor has integer data type
-        // If not, cast it. Here, we assume it's Int32
-        precondition(indices.data != nil, "Indices NDArray must have data.")
-        
         // Determine new shape by inserting 'depth' at the specified axis
         var newShape = indices.shape
         let rank = newShape.count
