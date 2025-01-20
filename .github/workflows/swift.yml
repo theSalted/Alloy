@@ -16,12 +16,14 @@ jobs:
 
     steps:
     - name: Install Swift
-      run: |
-        curl -L https://download.swift.org/swift-6.0-release/xcode/swift-6.0-RELEASE-osx.pkg -o swift.pkg
-        sudo installer -pkg swift.pkg -target /
+      uses: tayloraswift/swift-install-action@master
+      with:
+        swift-prefix: "swift-6.0-release/xcode/swift-6.0-RELEASE"
+        swift-id: "swift-6.0-RELEASE"
     - name: Check Swift
       run: swift --version
     - name: Build
       run: swift build -v
     - name: Run tests
       run: swift test -v
+
