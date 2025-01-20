@@ -22,6 +22,8 @@ jobs:
         swift-id: "swift-6.0-RELEASE"
     - name: Check Swift
       run: swift --version
+    - name: Check directory
+      run: ls
     - name: Build
       run: swift build -v
     - name: Run tests
