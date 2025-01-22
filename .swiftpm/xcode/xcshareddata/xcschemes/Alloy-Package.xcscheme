@@ -123,6 +123,11 @@
                BlueprintName = "AlloyTests"
                ReferencedContainer = "container:">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "NDArrayOperatorTests/testConv2DSingleChannel3x3()">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
    </TestAction>

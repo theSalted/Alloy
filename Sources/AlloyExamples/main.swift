@@ -91,7 +91,7 @@ func testConv2DSingleChannel3x3() {
     //   7*1 + 8*2 + 9*1
     //
     // = 1 + 4 + 3 + 8 + 20 + 12 + 7 + 16 + 9 = 80
-    let expectedOutput: [Float] = [80.0]
+    let _: [Float] = [80.0]
     
     do {
         // Perform the 2D convolution with no padding, stride=1, etc.

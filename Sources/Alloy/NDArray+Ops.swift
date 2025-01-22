@@ -556,27 +556,39 @@ extension NDArray {
 }
 
 extension NDArray {
+    
+    /// Normalizes the axis index, converting negative axes to positive ones.
+    ///
+    /// - Parameter axis: The axis to normalize.
+    /// - Returns: The normalized (positive) axis index.
+    /// - Throws: NDArrayError.operationError if the axis is out of bounds.
+    private func normalizedAxis(_ axis: Int) -> Int {
+        let rank = self.shape.count
+        let normalized = axis >= 0 ? axis : (rank + axis)
+        guard normalized >= 0 && normalized < rank else {
+            fatalError("Axis \(axis) is out of bounds for shape \(self.shape)")
+        }
+        return normalized
+    }
+    
     // MARK: - Reduction Operations
     /// Computes the reduction sum of all elements in the `NDArray`.
     public func sum(axis: Int? = nil) -> NDArray {
         let label: String
         var newShape: [Int]
         var reductionAxes: [Int]
-
+        
         if let axis = axis {
             label = "\(self.label ?? "NDArray").sum(axis: \(axis))"
+            // Normalize axis to handle negative indices
+            let normalizedAxis = self.normalizedAxis(axis)
             newShape = self.shape
-            // Normalize axis
-            let normalizedAxis = axis >= 0 ? axis : (self.shape.count + axis)
-            guard normalizedAxis >= 0 && normalizedAxis < self.shape.count else {
-                fatalError("Axis \(axis) is out of bounds for shape \(self.shape)")
-            }
-            newShape.remove(at: normalizedAxis)
+            newShape.remove(at: normalizedAxis) // Remove dimension at index
             reductionAxes = [normalizedAxis]
         } else {
             label = "\(self.label ?? "NDArray").sum()"
-            newShape = [1] // Represent scalar as [1]
-            reductionAxes = Array(0..<self.shape.count) // sum over all axes
+            newShape = [] // Scalar
+            reductionAxes = Array(0..<self.shape.count) // Sum over all axes
         }
 
         return NDArray(
@@ -598,17 +610,6 @@ extension NDArray {
                 name: nodeLabel
             )
 
-            // Verify the sumTensor's data type before casting
-            // Assuming you have a way to inspect sumTensor's data type
-            // If it's already float32, casting might be unnecessary
-            // Uncomment the following lines if casting is needed
-
-            /*
-            let float32Tensor = graph.cast(sumTensor, to: .float32, name: "\(String(describing: nodeLabel))_float32")
-            return float32Tensor
-            */
-
-            // Return the sumTensor directly if it's already float32
             return sumTensor
         }
     }
@@ -617,20 +618,39 @@ extension NDArray {
     ///
     /// - Returns: A new `NDArray` representing the sum of all elements.
     /// - Throws: `NDArrayError.operationError` if the operation fails.
-    public func cumsum(axis: Int,
-                       reverse: Bool = false,
-                       inclusive: Bool = true) -> NDArray {
-        let label = "\(self.label ?? "NDArray").sum()"
+    public func cumsum(
+        axis: Int,
+        reverse: Bool = false,
+        inclusive: Bool = true
+    ) -> NDArray {
+        // Normalize the axis index
+        let normalizedAxis = self.normalizedAxis(axis)
+        
+        // Define the label for debugging
+        let label = "\(self.label ?? "NDArray").cumsum(axis: \(axis), reverse: \(reverse), inclusive: \(inclusive))"
+        
+        // The shape after cumsum should remain the same as the input
+        let outputShape = self.shape
         
         return NDArray(
-            shape: [], // Scalar result
+            shape: outputShape,
             label: label,
             parents: [self]
         ) { graph, inputs, nodeLabel in
             guard inputs.count == 1 else {
-                throw NDArrayError.operationError("`sum` operation expects exactly 1 input.")
+                throw NDArrayError.operationError("`cumsum` operation expects exactly 1 input.")
             }
-            return graph.cumulativeSum(inputs[0], axis: axis, exclusive: inclusive, reverse: reverse, name: nodeLabel)
+            
+            // Correctly map 'inclusive' to 'exclusive'
+            let exclusive = !inclusive
+            
+            return graph.cumulativeSum(
+                inputs[0],
+                axis: normalizedAxis,
+                exclusive: exclusive,
+                reverse: reverse,
+                name: nodeLabel
+            )
         }
     }
     
@@ -639,20 +659,36 @@ extension NDArray {
     /// - Returns: A new `NDArray` representing the maximum value.
     /// - Throws: `NDArrayError.operationError` if the operation fails.
     public func max(axis: Int? = nil) -> NDArray {
-        let label = "\(self.label ?? "NDArray").max()"
+        let label: String
+        var newShape: [Int]
+        var reductionAxes: [Int]
         
+        if let axis = axis {
+            label = "\(self.label ?? "NDArray").max(axis: \(axis))"
+            // Normalize axis to handle negative indices
+            let normalizedAxis = self.normalizedAxis(axis)
+            newShape = self.shape
+            newShape.remove(at: normalizedAxis) // Remove dimension at index
+            reductionAxes = [normalizedAxis]
+        } else {
+            label = "\(self.label ?? "NDArray").max()"
+            newShape = [] // Scalar
+            reductionAxes = Array(0..<self.shape.count) // Max over all axes
+        }
+
         return NDArray(
-            shape: [], // Scalar result
+            shape: newShape,
             label: label,
             parents: [self]
         ) { graph, inputs, nodeLabel in
             guard inputs.count == 1 else {
                 throw NDArrayError.operationError("`max` operation expects exactly 1 input.")
             }
-            if let axis {
-                return graph.reductionMinimum(with: inputs[0], axis: axis, name: nodeLabel)
+            if let axis = axis {
+                let normalizedAxis = self.normalizedAxis(axis)
+                return graph.reductionMaximum(with: inputs[0], axis: normalizedAxis, name: nodeLabel)
             }
-            return graph.reductionMinimum(with: inputs[0], axes: nil, name: nodeLabel)
+            return graph.reductionMaximum(with: inputs[0], axes: reductionAxes.toNSNumberArray(), name: nodeLabel)
         }
     }
     
@@ -686,35 +722,44 @@ extension NDArray {
     public func argmax(axis: Int) -> NDArray {
         let label = "\(self.label ?? "NDArray").argmax(axis: \(axis))"
         
+        // Normalize the axis index
+        let normalizedAxis = self.normalizedAxis(axis)
+        
+        // Determine the new shape by removing the specified axis
+        var reducedShape = self.shape
+        reducedShape.remove(at: normalizedAxis)
+        
         return NDArray(
-            shape: self.shape.filter { $0 != axis }, // Reduced shape
+            shape: reducedShape, // Reduced shape
             label: label,
             parents: [self]
         ) { graph, inputs, nodeLabel in
             guard inputs.count == 1 else {
                 throw NDArrayError.operationError("`argmax` operation expects exactly 1 input.")
             }
-            return graph.reductionArgMaximum(with: inputs[0], axis: axis, name: nodeLabel)
+            return graph.reductionArgMaximum(with: inputs[0], axis: normalizedAxis, name: nodeLabel)
         }
     }
     
-    /// Computes the index of the minimum value along the specified axis.
-    ///
-    /// - Parameter axis: The axis along which to compute the `argmin`.
-    /// - Returns: A new `NDArray` representing the indices of the minimum values.
-    /// - Throws: `NDArrayError.operationError` if the operation fails.
     public func argmin(axis: Int) -> NDArray {
         let label = "\(self.label ?? "NDArray").argmin(axis: \(axis))"
         
+        // Normalize the axis index
+        let normalizedAxis = self.normalizedAxis(axis)
+        
+        // Determine the new shape by removing the specified axis
+        var reducedShape = self.shape
+        reducedShape.remove(at: normalizedAxis)
+        
         return NDArray(
-            shape: self.shape.filter { $0 != axis }, // Reduced shape
+            shape: reducedShape, // Reduced shape
             label: label,
             parents: [self]
         ) { graph, inputs, nodeLabel in
             guard inputs.count == 1 else {
                 throw NDArrayError.operationError("`argmin` operation expects exactly 1 input.")
             }
-            return graph.reductionArgMinimum(with: inputs[0], axis: axis, name: nodeLabel)
+            return graph.reductionArgMinimum(with: inputs[0], axis: normalizedAxis, name: nodeLabel)
         }
     }
     
@@ -759,12 +804,12 @@ extension NDArray {
         dataType: MPSDataType = .float32,
         label: String? = nil
     ) -> NDArray {
+        // Normalize the axis index
+        let normalizedAxis = indices.normalizedAxis(axis)
+        
         // Determine new shape by inserting 'depth' at the specified axis
         var newShape = indices.shape
-        let rank = newShape.count
-        let insertAxis = axis >= 0 ? axis : rank + axis + 1
-        precondition(insertAxis >= 0 && insertAxis <= rank, "Axis \(axis) out of bounds for shape \(indices.shape)")
-        newShape.insert(depth, at: insertAxis)
+        newShape.insert(depth, at: normalizedAxis)
         
         return NDArray(
             shape: newShape,
@@ -782,19 +827,19 @@ extension NDArray {
                 let castedIndices: MPSGraphTensor
                 if indicesTensor.dataType != .int32 {
                     castedIndices = graph.cast(
-                        indicesTensor,
+                        inputs[0],
                         to: .int32,
-                        name: "\(nodeLabel ?? "oneHot")_cast"
+                        name: "\(String(describing: nodeLabel))_cast"
                     )
                 } else {
-                    castedIndices = indicesTensor
+                    castedIndices = inputs[0]
                 }
                 
                 // Create one-hot tensor
                 let oneHotTensor = graph.oneHot(
                     withIndicesTensor: castedIndices,
                     depth: depth,
-                    axis: axis,
+                    axis: normalizedAxis, // Use normalized axis
                     dataType: dataType,
                     name: nodeLabel
                 )
