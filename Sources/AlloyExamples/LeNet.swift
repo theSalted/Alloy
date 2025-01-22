@@ -38,6 +38,7 @@ public func accuracy(logits: NDArray, trueLabels: [Int]) throws -> Float {
 
 /// Returns a dictionary of trainable parameters for LeNet.
 public func buildLeNet() -> [String: NDArray] {
+    print("Building LeNet")
     // 1) Conv1 weights & bias: [6, 1, 5, 5]
     let conv1_w = NDArray.randn(shape: [6, 1, 5, 5], std: 0.1, label: "conv1_w")
     let conv1_b = NDArray.randn(shape: [6], std: 0.1, label: "conv1_b")
@@ -146,9 +147,11 @@ public func trainLeNet(
     let trainCount = trainY.shape[0]
     let stepsPerEpoch = trainCount / batchSize
     
+    print("Start training")
     // 3) Iterate over epochs
     for epoch in 1...epochs {
         var avgLoss: Float = 0
+        print("Epoch: \(epoch)")
         
         // Optionally shuffle the training data at the start of each epoch
         // Implement shuffling if your framework supports it
@@ -156,6 +159,8 @@ public func trainLeNet(
         
         // 4) Iterate over mini-batches
         for step in 0..<stepsPerEpoch {
+            
+            print("Mini-batch: \(step)")
             let startIdx = step * batchSize
             let endIdx = min(startIdx + batchSize, trainCount)
             
@@ -181,10 +186,12 @@ public func trainLeNet(
             let logits = try lenetForward(xBatch, params)
             
             // 8) Compute loss
+            print("Compute Loss")
             let loss = try softmaxCrossEntropy(logits: logits, labels: oneHotLabels)
             
             // 9) Perform SGD update
             // Assuming SGD updates params in-place or returns updated params
+            print("Perform SGD update")
             try SGD(loss: loss, params: params.values.map { $0 }, learningRate: learningRate)
             
             // 10) Optionally fetch the float loss for logging

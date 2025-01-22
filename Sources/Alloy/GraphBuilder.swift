@@ -14,6 +14,7 @@ struct GraphBuilder {
     
     /// Build an MPSGraph from the DAG, returning the final MPSGraphTensor for the `root`.
     static func buildGraph(from root: NDArray) throws -> (MPSGraph, [NDArray : MPSGraphTensor]) {
+        print("Building Graph")
         let sortedNodes = root.topologicalSort()
         guard !sortedNodes.isEmpty else {
             throw NDArrayError.emptyDAG("Root NDArray produced an empty DAG.")

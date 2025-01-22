@@ -137,7 +137,9 @@ public func backward(
     device: MTLDevice? = nil,
     feeds: [MPSGraphTensor : MPSGraphTensorData] = [:]
 ) throws -> [NDArray: Data] {
+    print("Backward")
     // 1) Build the forward graph
+    
     let (graph, nodeMap) = try GraphBuilder.buildGraph(from: loss)
     
     // 2) Retrieve MPSGraphTensor for the `loss` node
@@ -157,6 +159,7 @@ public func backward(
     // NOTE: Apple calls the method `gradients(of:with: name:)` or
     //  `gradients(of:withRespectToTensors: name:)` in some versions.
     // Adjust for your Xcode/SDK version:
+    
     let gradientsMap: [MPSGraphTensor : MPSGraphTensor] =
         graph.gradients(of: lossTensor,
                         with: parameterTensors,
@@ -169,10 +172,11 @@ public func backward(
     targets.append(contentsOf: gradientsMap.values)
     
     // 5) Create command queue
-    let realDevice = device ?? MTLCreateSystemDefaultDevice()!
-    guard let cmdQueue = realDevice.makeCommandQueue() else {
+    guard let cmdQueue = Alloy.shared.device.makeCommandQueue() else {
         throw NDArrayError.operationError("Failed to create a Metal command queue.")
     }
+    
+    print("run graph")
     
     // 6) Run the graph
     let resultMap = graph.run(

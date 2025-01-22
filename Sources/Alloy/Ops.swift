@@ -108,8 +108,8 @@ public func conv2d(
     
     // Determine data and weight layouts
     // Assuming NCHW layout
-    convDesc.dataLayout = .NHWC
-    convDesc.weightsLayout = .NHWC
+    convDesc.dataLayout = .NCHW
+    convDesc.weightsLayout = .NCHW
     
     // Parents: input, weights, (optional) bias
     var parents: [NDArray] = [input, weights]
