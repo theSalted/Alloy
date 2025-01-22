@@ -2,8 +2,8 @@
 
 Alloy is an array framework for deep learning on Metal. Alloy is built with Swift and Metal Performance Shader Graph to provide a ease to use, type-safe machine learning with best in class performance on Apple devices that suppot MPSGraph.
 
-[!Caution]
-This framework is in Pre-Alpha stage of development, only suite for research. API WILL change. And production not recommended.
+>[!Caution]
+>This framework is in Pre-Alpha stage of development, only suite for research. API WILL change. And production not recommended.
 
 ```Swift
 import Alloy
