@@ -101,12 +101,13 @@ public func SGD(
     // 3. Retrieve the MPSGraphTensor corresponding to the loss
     
     
-    // 4. Create a constant tensor for the learning rate
+    // 4. Create a variable tensor for the learning rate
     let lrData = withUnsafeBytes(of: learningRate) { Data($0) }
-    let learningRateTensor = graph.constant(
-        lrData,
+    let learningRateTensor = graph.variable(
+        with: lrData,
         shape: [],
-        dataType: .float32
+        dataType: .float32,
+        name: "lr tensor"
     )
     
     // 5. Iterate over each parameter and apply SGD update
@@ -125,12 +126,13 @@ public func SGD(
             continue
         }
         
-        // c. Create a constant tensor for the gradient
-        // Convert `Data` to `MPSGraphTensor` by creating a constant
-        let gradTensor = graph.constant(
-            gradData,
+        // c. Create a variable tensor for the gradient
+        // Convert `Data` to `MPSGraphTensor` by creating a variable
+        let gradTensor = graph.variable(
+            with: gradData,
             shape: param.shape.map { NSNumber(value: $0) },
-            dataType: .float32
+            dataType: .float32,
+            name: param.label
         )
         
         graph.stochasticGradientDescent(learningRate: learningRateTensor, values: values, gradient: gradTensor, name: "sgd_update_\(param.label ?? "param")")

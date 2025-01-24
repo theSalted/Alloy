@@ -127,6 +127,9 @@
                <Test
                   Identifier = "NDArrayOperatorTests/testConv2DSingleChannel3x3()">
                </Test>
+               <Test
+                  Identifier = "NDArrayOperatorTests/testConv2DSingleChannel3x3()">
+               </Test>
             </SkippedTests>
          </TestableReference>
       </Testables>

@@ -52,10 +52,11 @@ extension NDArray {
                 }
                 
                 // Create the shape tensor
-                let shapeTensor = graph.constant(
-                    shapeData,
+                let shapeTensor = graph.variable(
+                    with: shapeData,
                     shape: [NSNumber(value: intShape.count)],
-                    dataType: .int32
+                    dataType: .int32,
+                    name: "shape"
                 )
                 
                 // 2. Create descriptor for normal distribution

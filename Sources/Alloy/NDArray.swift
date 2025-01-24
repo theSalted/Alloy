@@ -55,7 +55,7 @@ public class NDArray: Hashable {
     /// - Parameters:
     ///   - shape: The shape of the tensor.
     ///   - label: An optional name/label (debugging).
-    ///   - data: If provided, this node becomes a constant in the graph.
+    ///   - data: If provided, this node becomes a variable in the graph.
     ///           If `nil`, it's treated as a placeholder.
     public init(
         _ value: [Float]? = nil,

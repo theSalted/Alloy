@@ -39,11 +39,11 @@ struct GraphBuilder {
                 nodeToTensor[node] = newTensor
                 
             } else {
-                // Leaf node => constant or placeholder
+                // Leaf node => variable or placeholder
                 if let rawData = node.data {
-                    // Constant
+                    // variable
                     let data = rawData.withUnsafeBytes { Data($0) }
-                    let t = graph.constant(data, shape: node.shape.map { NSNumber(value: $0) }, dataType: .float32)// Candidate expects value of type 'Data' for parameter #1 (got '[Float]') (MetalPerformanceShadersGraph.MPSGraph)
+                    let t = graph.variable(with: data, shape: node.shape.map { NSNumber(value: $0) }, dataType: .float32, name: node.label)// Candidate expects value of type 'Data' for parameter #1 (got '[Float]') (MetalPerformanceShadersGraph.MPSGraph)
                     nodeToTensor[node] = t
                 } else {
                     // Placeholder
@@ -90,14 +90,15 @@ struct GraphBuilder {
                 nodeToTensor[node] = newTensor
                 
             } else {
-                // Leaf node => constant or placeholder
+                // Leaf node => variable or placeholder
                 if let rawData = node.data {
-                    // Constant
+                    // variable
                     let data = rawData.withUnsafeBytes { Data($0) }
-                    let t = graph.constant(
-                        data,
+                    let t = graph.variable(
+                        with: data,
                         shape: node.shape.map { NSNumber(value: $0) },
-                        dataType: .float32
+                        dataType: .float32,
+                        name: node.label
                     )
                     nodeToTensor[node] = t
                 } else {
