@@ -22,6 +22,7 @@ let package = Package(
         .target(name: "AlloyDatasets", dependencies: ["Alloy"]),
         .target(name: "AlloyNN", dependencies: ["Alloy"]),
         .target(name: "AlloyUtils"),
+        .target(name: "AlloyDemos", dependencies: ["Alloy"]),
         .executableTarget(name: "AlloyExamples", dependencies: ["Alloy", "AlloyDatasets", "AlloyRandom", "AlloyUtils"]),
         
         // Add a test target that depends on "Alloy" and the "Testing" framework

@@ -37,97 +37,106 @@ public func accuracy(logits: NDArray, trueLabels: [Int]) throws -> Float {
 }
 
 /// Returns a dictionary of trainable parameters for LeNet.
+import AlloyRandom
+
+/// Returns a dictionary of trainable parameters for LeNet, in NHWC layout.
 public func buildLeNet() -> [String: NDArray] {
-    print("Building LeNet")
-    // 1) Conv1 weights & bias: [6, 1, 5, 5]
-    let conv1_w = NDArray.randn(shape: [6, 1, 5, 5], std: 0.1, label: "conv1_w")
+    // For MNIST: input is [N, 28, 28, 1] => kernel: [5, 5, inC, outC]
+    let conv1_w = NDArray.randn(shape: [5, 5, 1, 6], std: 0.1, label: "conv1_w")
     let conv1_b = NDArray.randn(shape: [6], std: 0.1, label: "conv1_b")
     
-    // 2) Conv2 weights & bias: [16, 6, 5, 5]
-    let conv2_w = NDArray.randn(shape: [16, 6, 5, 5], std: 0.1, label: "conv2_w")
+    // The output of conv1 is [N, 28, 28, 6].
+    // Then we typically do pool => [N, 14, 14, 6].
+    //
+    // Next conv: [5, 5, 6, 16] => out shape [N, 14, 14, 16] (if padding=2).
+    // But if we want the classic LeNet shape transitions, we might do no padding:
+    // so shape after conv2 would be [N, 10, 10, 16] if stride=1 and no padding,
+    // then pool => [N, 5, 5, 16].
+    let conv2_w = NDArray.randn(shape: [5, 5, 6, 16], std: 0.1, label: "conv2_w")
     let conv2_b = NDArray.randn(shape: [16], std: 0.1, label: "conv2_b")
     
-    // 3) FC1: input dim=16*5*5=400, output=120
+    // Flatten => shape [N, 5*5*16] = [N, 400].
+    // Then fully-connected 1 => out=120
     let fc1_w = NDArray.randn(shape: [120, 400], std: 0.1, label: "fc1_w")
     let fc1_b = NDArray.randn(shape: [120], std: 0.1, label: "fc1_b")
     
-    // 4) FC2: 120 -> 84
+    // Fully-connected 2 => out=84
     let fc2_w = NDArray.randn(shape: [84, 120], std: 0.1, label: "fc2_w")
     let fc2_b = NDArray.randn(shape: [84], std: 0.1, label: "fc2_b")
     
-    // 5) FC3: 84 -> 10
+    // Fully-connected 3 => out=10 (final logits)
     let fc3_w = NDArray.randn(shape: [10, 84], std: 0.1, label: "fc3_w")
     let fc3_b = NDArray.randn(shape: [10], std: 0.1, label: "fc3_b")
     
     return [
         "conv1_w": conv1_w, "conv1_b": conv1_b,
         "conv2_w": conv2_w, "conv2_b": conv2_b,
-        "fc1_w": fc1_w,     "fc1_b": fc1_b,
-        "fc2_w": fc2_w,     "fc2_b": fc2_b,
-        "fc3_w": fc3_w,     "fc3_b": fc3_b,
+        "fc1_w":   fc1_w,   "fc1_b":   fc1_b,
+        "fc2_w":   fc2_w,   "fc2_b":   fc2_b,
+        "fc3_w":   fc3_w,   "fc3_b":   fc3_b,
     ]
 }
 
-/// Forward pass of LeNet. Expects input shape: [N, 1, 28, 28].
+/// Forward pass of LeNet with NHWC shapes.
+/// - Parameter x: The input NDArray, shape [N, 28, 28, 1].
+/// - Parameter p: A dictionary of parameters from `buildLeNet()`.
+/// - Returns: The logits of shape [N, 10].
 public func lenetForward(_ x: NDArray, _ p: [String: NDArray]) throws -> NDArray {
     print("lenetForward input shape:", x.shape)
-    // Conv1 + relu + pool
+    // Should be [N, 28, 28, 1]
+    
+    // 1) Conv1: kernel=5x5, padding=2 => output is [N, 28, 28, 6]
     let c1 = try conv2d(
         input: x,
         weights: p["conv1_w"]!,
-        bias: p["conv1_b"]!,
+        bias:    p["conv1_b"]!,
         stride: (1,1),
-        padding: (2,2,2,2), // pad left=2,right=2,top=2,bottom=2
-        dilation: (1,1),
-        groups: 1,
-        label: "conv1"
+        padding: (2,2,2,2), // left=2, right=2, top=2, bottom=2
+        label:   "conv1"
     )
-    
+    // ReLU => same shape
     let r1 = relu(c1, label: "relu1")
-    print("r1 shape:", r1.shape)
+    print("r1 shape:", r1.shape) // expect [N, 28, 28, 6]
     
+    // 2) Pool => typical 2×2 max pool => [N, 14, 14, 6]
     let p1 = maxPool2d(r1, kernelSize: (2,2), stride: (2,2), label: "pool1")
-    print("p1 shape:", p1.shape)
+    print("p1 shape:", p1.shape) // expect [N, 14, 14, 6]
     
-    // Conv2 + relu + pool
+    // 3) Conv2: kernel=5×5, no padding => output [N, 10, 10, 16]
     let c2 = try conv2d(
         input: p1,
         weights: p["conv2_w"]!,
-        bias: p["conv2_b"]!,
+        bias:    p["conv2_b"]!,
         stride: (1,1),
+        // If you want no padding, do (0,0,0,0):
         padding: (0,0,0,0),
-        dilation: (1,1),
-        groups: 1,
-        label: "conv2"
+        label:   "conv2"
     )
-    print("c2 shape:", c2.shape)
-    
     let r2 = relu(c2, label: "relu2")
-    print("r2 shape:", r2.shape)
+    print("r2 shape:", r2.shape) // expect [N, 10, 10, 16]
     
+    // 4) Pool => 2×2 => [N, 5, 5, 16]
     let p2 = maxPool2d(r2, kernelSize: (2,2), stride: (2,2), label: "pool2")
-    print("p2 shape:", p2.shape)
+    print("p2 shape:", p2.shape) // expect [N, 5, 5, 16]
     
-    // Flatten
+    // 5) Flatten => [N, 5*5*16] = [N, 400]
     let f = flatten(p2)
-    print("f shape:", f.shape)
+    print("f shape:", f.shape) // [N, 400]
     
-    // FC1 + relu
+    // 6) FC1 => [N, 120]
     let fc1 = try linear(f, weight: p["fc1_w"]!, bias: p["fc1_b"]!)
-    print("fc1 shape:", fc1.shape)
     let r3 = relu(fc1, label: "relu3")
-    print("r3 shape:", r3.shape)
+    print("r3 shape:", r3.shape) // [N, 120]
     
-    // FC2 + relu
+    // 7) FC2 => [N, 84]
     let fc2 = try linear(r3, weight: p["fc2_w"]!, bias: p["fc2_b"]!)
-    print("fc2 shape:", fc2.shape)
     let r4 = relu(fc2, label: "relu4")
-    print("r4 shape:", r4.shape)
+    print("r4 shape:", r4.shape) // [N, 84]
     
-    // FC3 => logits*
+    // 8) FC3 => [N, 10] (logits)
     let fc3 = try linear(r4, weight: p["fc3_w"]!, bias: p["fc3_b"]!)
-    print("fc3 shape:", fc3.shape)
-    // No activation => these are final logits
+    print("fc3 shape:", fc3.shape) // [N, 10]
+    
     return fc3
 }
 
